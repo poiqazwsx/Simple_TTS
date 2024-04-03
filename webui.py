@@ -757,7 +757,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                 
             gr.Markdown(value="0d-Speech to text proofreading tool")
             with gr.Row():
-                if_label = gr.Checkbox(label=i"Open labelling WebUI",show_label=True)
+                if_label = gr.Checkbox(label="Open labelling WebUI",show_label=True)
                 path_list = gr.Textbox(
                     label=".list annotation file path",
                     value="D:\\RVC1006\\GPT-SoVITS\\raw\\xxx.list",
@@ -783,7 +783,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
             with gr.TabItem("1A-Dataset formatting"):
                 gr.Markdown(value="output folder (logs/{experiment name}) should have files and folders starts with 23456.")
                 with gr.Row():
-                    inp_text = gr.Textbox(label="*Text labelling file"value=r"D:\RVC1006\GPT-SoVITS\raw\xxx.list",interactive=True)
+                    inp_text = gr.Textbox(label="*Text labelling file", value=r"D:\RVC1006\GPT-SoVITS\raw\xxx.list",interactive=True)
                     inp_wav_dir = gr.Textbox(
                         label="*Audio dataset folder",
                         # value=r"D:\RVC1006\GPT-SoVITS\raw\xxx",
