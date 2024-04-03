@@ -1,10 +1,10 @@
 '''
-按中英混合识别
-按日英混合识别
-多语种启动切分识别语种
-全部按中文识别
-全部按英文识别
-全部按日文识别
+Recognize as a mix of Chinese and English
+Recognize as a mix of Japanese and English
+Multi-language recognition to identify the language
+Recognize all as Chinese
+Recognize all as English
+Recognize all as Japanese
 '''
 import os, re, logging
 import LangSegment
@@ -65,11 +65,8 @@ from text.cleaner import clean_text
 from time import time as ttime
 from module.mel_processing import spectrogram_torch
 from my_utils import load_audio
-from tools.i18n.i18n import I18nAuto
 
-i18n = I18nAuto()
-
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # 确保直接启动推理UI时也能够设置。
+# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # Ensure that settings can also be configured when directly launching the inference UI.
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -199,12 +196,12 @@ def get_spepc(hps, filename):
 
 
 dict_language = {
-    i18n("中文"): "all_zh",#全部按中文识别
-    i18n("英文"): "en",#全部按英文识别#######不变
-    i18n("日文"): "all_ja",#全部按日文识别
-    i18n("中英混合"): "zh",#按中英混合识别####不变
-    i18n("日英混合"): "ja",#按日英混合识别####不变
-    i18n("多语种混合"): "auto",#多语种启动切分识别语种
+    "Chinese": "all_zh",#Recognize all as Chinese
+    "English": "en",#Recognize all as English#######unchanged
+    "Japanese": "all_ja",#Recognize all as Japanese
+    "Chinese + English": "zh",#Recognize as a mix of Chinese and English####unchanged
+    "Japanese + English": "ja",#Recognize as a mix of Japanese and English####unchanged
+    "auto": "auto",#Multi-language recognition to identify the language upon launch
 }
 
 
@@ -243,7 +240,7 @@ def get_phones_and_bert(text,language):
             LangSegment.setfilters(["en"])
             formattext = " ".join(tmp["text"] for tmp in LangSegment.getTexts(text))
         else:
-            # 因无法区别中日文汉字,以用户输入为准
+              # Since it is impossible to distinguish between Chinese and Japanese characters, the user's input will be the standard.
             formattext = text
         while "  " in formattext:
             formattext = formattext.replace("  ", " ")
@@ -272,7 +269,7 @@ def get_phones_and_bert(text,language):
                 if tmp["lang"] == "en":
                     langlist.append(tmp["lang"])
                 else:
-                    # 因无法区别中日文汉字,以用户输入为准
+                   # Since it is impossible to distinguish between Chinese and Japanese characters, the input from the user shall prevail.
                     langlist.append(language)
                 textlist.append(tmp["text"])
         print(textlist)
@@ -311,7 +308,7 @@ def merge_short_text_in_array(texts, threshold):
             result[len(result) - 1] += text
     return result
 
-def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language, how_to_cut=i18n("不切"), top_k=20, top_p=0.6, temperature=0.6, ref_free = False):
+def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language, how_to_cut="No slice", top_k=20, top_p=0.6, temperature=0.6, ref_free = False):
     if prompt_text is None or len(prompt_text) == 0:
         ref_free = True
     t0 = ttime()
@@ -320,11 +317,11 @@ def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language,
     if not ref_free:
         prompt_text = prompt_text.strip("\n")
         if (prompt_text[-1] not in splits): prompt_text += "。" if prompt_language != "en" else "."
-        print(i18n("实际输入的参考文本:"), prompt_text)
+        print("Reference text for actual input:", prompt_text)
     text = text.strip("\n")
     if (text[0] not in splits and len(get_first(text)) < 4): text = "。" + text if text_language != "en" else "." + text
     
-    print(i18n("实际输入的目标文本:"), text)
+    print("Target text for actual input:", text)
     zero_wav = np.zeros(
         int(hps.data.sampling_rate * 0.3),
         dtype=np.float16 if is_half == True else np.float32,
@@ -332,7 +329,7 @@ def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language,
     with torch.no_grad():
         wav16k, sr = librosa.load(ref_wav_path, sr=16000)
         if (wav16k.shape[0] > 160000 or wav16k.shape[0] < 48000):
-            raise OSError(i18n("参考音频在3~10秒范围外，请更换！"))
+            raise OSError("The reference audio is outside the 3~10 second range, please change it!")
         wav16k = torch.from_numpy(wav16k)
         zero_wav_torch = torch.from_numpy(zero_wav)
         if is_half == True:
@@ -352,19 +349,19 @@ def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language,
         prompt_semantic = codes[0, 0]
     t1 = ttime()
 
-    if (how_to_cut == i18n("凑四句一切")):
+    if (how_to_cut == "Slice once every 4 sentences"):
         text = cut1(text)
-    elif (how_to_cut == i18n("凑50字一切")):
+    elif (how_to_cut == "Cut per 50 characters"):
         text = cut2(text)
-    elif (how_to_cut == i18n("按中文句号。切")):
+    elif (how_to_cut == "Slice by Chinese punct"):
         text = cut3(text)
-    elif (how_to_cut == i18n("按英文句号.切")):
+    elif (how_to_cut == "Slice by English punct"):
         text = cut4(text)
-    elif (how_to_cut == i18n("按标点符号切")):
+    elif (how_to_cut == "Split by punctuation"):
         text = cut5(text)
     while "\n\n" in text:
         text = text.replace("\n\n", "\n")
-    print(i18n("实际输入的目标文本(切句后):"), text)
+    print("Text input after slicing", text)
     texts = text.split("\n")
     texts = merge_short_text_in_array(texts, 5)
     audio_opt = []
@@ -372,13 +369,13 @@ def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language,
         phones1,bert1,norm_text1=get_phones_and_bert(prompt_text, prompt_language)
 
     for text in texts:
-        # 解决输入目标文本的空行导致报错的问题
+        # Solved the issue where blank lines in the input target text cause errors.
         if (len(text.strip()) == 0):
             continue
         if (text[-1] not in splits): text += "。" if text_language != "en" else "."
-        print(i18n("实际输入的目标文本(每句):"), text)
+        print("Actual input target text (each sentence):", text)
         phones2,bert2,norm_text2=get_phones_and_bert(text, text_language)
-        print(i18n("前端处理后的文本(每句):"), norm_text2)
+        print("Processed text from the front end (each sentence):", norm_text2)
         if not ref_free:
             bert = torch.cat([bert1, bert2], 1)
             all_phoneme_ids = torch.LongTensor(phones1+phones2).to(device).unsqueeze(0)
@@ -421,8 +418,8 @@ def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language,
                 .detach()
                 .cpu()
                 .numpy()[0, 0]
-        )  ###试试重建不带上prompt部分
-        max_audio=np.abs(audio).max()#简单防止16bit爆音
+        )  ###Try reconstructing without including the prompt part
+        max_audio=np.abs(audio).max()#Simple prevention of 16-bit audio clipping
         if max_audio>1:audio/=max_audio
         audio_opt.append(audio)
         audio_opt.append(zero_wav)
@@ -442,7 +439,7 @@ def split(todo_text):
     todo_texts = []
     while 1:
         if i_split_head >= len_text:
-            break  # 结尾一定有标点，所以直接跳出即可，最后一段在上次已加入
+            break  # There must be punctuation at the end, so you can directly break out. The last paragraph has already been added in the previous iteration.
         if todo_text[i_split_head] in splits:
             i_split_head += 1
             todo_texts.append(todo_text[i_split_tail:i_split_head])
@@ -484,7 +481,7 @@ def cut2(inp):
     if tmp_str != "":
         opts.append(tmp_str)
     # print(opts)
-    if len(opts) > 1 and len(opts[-1]) < 50:  ##如果最后一个太短了，和前一个合一起
+    if len(opts) > 1 and len(opts[-1]) < 50:  ##If the last segment is too short, merge it with the previous one.
         opts[-2] = opts[-2] + opts[-1]
         opts = opts[:-1]
     return "\n".join(opts)
@@ -508,7 +505,7 @@ def cut5(inp):
     punds = r'[,.;?!、，。？！;：…]'
     items = re.split(f'({punds})', inp)
     mergeitems = ["".join(group) for group in zip(items[::2], items[1::2])]
-    # 在句子不存在符号或句尾无符号的时候保证文本完整
+    # Ensure the integrity of the text when there are no symbols in the sentence or at the end of the sentence
     if len(items)%2 == 1:
         mergeitems.append(items[-1])
     opt = "\n".join(mergeitems)
@@ -516,9 +513,9 @@ def cut5(inp):
 
 
 def custom_sort_key(s):
-    # 使用正则表达式提取字符串中的数字部分和非数字部分
+    # Use regular expressions to extract the numeric and non-numeric parts from a string.
     parts = re.split('(\d+)', s)
-    # 将数字部分转换为整数，非数字部分保持不变
+    # Convert the numeric part to an integer, while keeping the non-numeric part unchanged.
     parts = [int(part) if part.isdigit() else part for part in parts]
     return parts
 
@@ -550,46 +547,46 @@ SoVITS_names, GPT_names = get_weights_names()
 
 with gr.Blocks(title="GPT-SoVITS WebUI") as app:
     gr.Markdown(
-        value=i18n("本软件以MIT协议开源, 作者不对软件具备任何控制力, 使用软件者、传播软件导出的声音者自负全责. <br>如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录<b>LICENSE</b>.")
+        value="This software is under MIT licence.The author does not have any control for this software. Users are solely reponsible for all voices thats being converted and/or distributed. If you disagree with this Terms and Conditions, you cannot use or cite any files or code in this file. Please check LICENSE. for more info. <br>如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录<b>LICENSE</b>."
     )
     with gr.Group():
-        gr.Markdown(value=i18n("模型切换"))
+        gr.Markdown(value="Model switching")
         with gr.Row():
-            GPT_dropdown = gr.Dropdown(label=i18n("GPT模型列表"), choices=sorted(GPT_names, key=custom_sort_key), value=gpt_path, interactive=True)
-            SoVITS_dropdown = gr.Dropdown(label=i18n("SoVITS模型列表"), choices=sorted(SoVITS_names, key=custom_sort_key), value=sovits_path, interactive=True)
-            refresh_button = gr.Button(i18n("刷新模型路径"), variant="primary")
+            GPT_dropdown = gr.Dropdown(label="GPT weight list", choices=sorted(GPT_names, key=custom_sort_key), value=gpt_path, interactive=True)
+            SoVITS_dropdown = gr.Dropdown(label="SoVITS weight list", choices=sorted(SoVITS_names, key=custom_sort_key), value=sovits_path, interactive=True)
+            refresh_button = gr.Button("refreshing model paths", variant="primary")
             refresh_button.click(fn=change_choices, inputs=[], outputs=[SoVITS_dropdown, GPT_dropdown])
             SoVITS_dropdown.change(change_sovits_weights, [SoVITS_dropdown], [])
             GPT_dropdown.change(change_gpt_weights, [GPT_dropdown], [])
-        gr.Markdown(value=i18n("*请上传并填写参考信息"))
+        gr.Markdown(value="*Please upload and fill reference information")
         with gr.Row():
-            inp_ref = gr.Audio(label=i18n("请上传3~10秒内参考音频，超过会报错！"), type="filepath")
+            inp_ref = gr.Audio(label="Please upload a reference audio within the 3-10 second range; if it exceeds this duration, it will raise errors.", type="filepath")
             with gr.Column():
-                ref_text_free = gr.Checkbox(label=i18n("开启无参考文本模式。不填参考文本亦相当于开启。"), value=False, interactive=True, show_label=True)
-                gr.Markdown(i18n("使用无参考文本模式时建议使用微调的GPT，听不清参考音频说的啥(不晓得写啥)可以开，开启后无视填写的参考文本。"))
-                prompt_text = gr.Textbox(label=i18n("参考音频的文本"), value="")
+                ref_text_free = gr.Checkbox(label="Enable the no reference text mode. Not filling in the reference text is equivalent to enabling this mode.", value=False, interactive=True, show_label=True)
+                gr.Markdown("When using the no reference text mode, it is recommended to use a fine-tuned GPT model.")
+                prompt_text = gr.Textbox(label="Text for reference audio", value="")
             prompt_language = gr.Dropdown(
-                label=i18n("参考音频的语种"), choices=[i18n("中文"), i18n("英文"), i18n("日文"), i18n("中英混合"), i18n("日英混合"), i18n("多语种混合")], value=i18n("中文")
+                label="Language for reference audio", choices=["Chinese", "English", "Japanese", "Chinese + English", "Japanese + English", "多语种混合"], value="中文"
             )
-        gr.Markdown(value=i18n("*请填写需要合成的目标文本和语种模式"))
+        gr.Markdown(value="*Please fill the text that needs inference. Select Chinese for mixed Chinese and English text, choose Japanese for mixed Japanese and English text. Mixed Chinese and Japanese is currently not supported; non-target language text will be automatically discarded.")
         with gr.Row():
-            text = gr.Textbox(label=i18n("需要合成的文本"), value="")
+            text = gr.Textbox(label="Inference text", value="")
             text_language = gr.Dropdown(
-                label=i18n("需要合成的语种"), choices=[i18n("中文"), i18n("英文"), i18n("日文"), i18n("中英混合"), i18n("日英混合"), i18n("多语种混合")], value=i18n("中文")
+                label="Inference text language", choices=["Chinese", "English", "Japanese", "Chinese + English", "Japanese + English", "auto"], value="English"
             )
             how_to_cut = gr.Radio(
-                label=i18n("怎么切"),
-                choices=[i18n("不切"), i18n("凑四句一切"), i18n("凑50字一切"), i18n("按中文句号。切"), i18n("按英文句号.切"), i18n("按标点符号切"), ],
-                value=i18n("凑四句一切"),
+                label="How to slice the sentence",
+                choices=["No slice", "Slice once every 4 sentences", "Cut per 50 characters", "Slice by Chinese punct", "Slice by English punct", "Split by punctuation marks", ],
+                value="Slice once every 4 sentences",
                 interactive=True,
             )
             with gr.Row():
-                gr.Markdown(value=i18n("gpt采样参数(无参考文本时不要太低)："))
-                top_k = gr.Slider(minimum=1,maximum=100,step=1,label=i18n("top_k"),value=5,interactive=True)
-                top_p = gr.Slider(minimum=0,maximum=1,step=0.05,label=i18n("top_p"),value=1,interactive=True)
-                temperature = gr.Slider(minimum=0,maximum=1,step=0.05,label=i18n("temperature"),value=1,interactive=True)
-            inference_button = gr.Button(i18n("合成语音"), variant="primary")
-            output = gr.Audio(label=i18n("输出的语音"))
+                gr.Markdown("GPT sampling parameters (don't set too low when there's no reference text):")
+                top_k = gr.Slider(minimum=1,maximum=100,step=1,label="top_k",value=5,interactive=True)
+                top_p = gr.Slider(minimum=0,maximum=1,step=0.05,label="top_p",value=1,interactive=True)
+                temperature = gr.Slider(minimum=0,maximum=1,step=0.05,label="temperature",value=1,interactive=True)
+            inference_button = gr.Button("inference", variant="primary")
+            output = gr.Audio(label="Output")
 
         inference_button.click(
             get_tts_wav,
@@ -597,21 +594,21 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
             [output],
         )
 
-        gr.Markdown(value=i18n("文本切分工具。太长的文本合成出来效果不一定好，所以太长建议先切。合成会根据文本的换行分开合成再拼起来。"))
+        gr.Markdown(value="Text slicer tool, since there will be issues when infering long texts, so it is advised to cut first. When infering, it will infer respectively then combined together.")
         with gr.Row():
-            text_inp = gr.Textbox(label=i18n("需要合成的切分前文本"), value="")
-            button1 = gr.Button(i18n("凑四句一切"), variant="primary")
-            button2 = gr.Button(i18n("凑50字一切"), variant="primary")
-            button3 = gr.Button(i18n("按中文句号。切"), variant="primary")
-            button4 = gr.Button(i18n("按英文句号.切"), variant="primary")
-            button5 = gr.Button(i18n("按标点符号切"), variant="primary")
-            text_opt = gr.Textbox(label=i18n("切分后文本"), value="")
+            text_inp = gr.Textbox(label="Inference text that needs to be sliced", value="")
+            button1 = gr.Button("Slice once every 4 sentences", variant="primary")
+            button2 = gr.Button("Cut per 50 characters", variant="primary")
+            button3 = gr.Button("Slice by Chinese punct", variant="primary")
+            button4 = gr.Button("Slice by English punct", variant="primary")
+            button5 = gr.Button("Split by punctuation marks", variant="primary")
+            text_opt = gr.Textbox(label="Text after sliced", value="")
             button1.click(cut1, [text_inp], [text_opt])
             button2.click(cut2, [text_inp], [text_opt])
             button3.click(cut3, [text_inp], [text_opt])
             button4.click(cut4, [text_inp], [text_opt])
             button5.click(cut5, [text_inp], [text_opt])
-        gr.Markdown(value=i18n("后续将支持转音素、手工修改音素、语音合成分步执行。"))
+        gr.Markdown(value="Subsequent support will include phonetic conversion, manual phonetic modification, and step-by-step execution of speech synthesis.")
 
 app.queue(concurrency_count=511, max_size=1022).launch(
     server_name="0.0.0.0",
