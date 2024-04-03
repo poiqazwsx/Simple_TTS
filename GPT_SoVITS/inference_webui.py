@@ -547,7 +547,7 @@ SoVITS_names, GPT_names = get_weights_names()
 
 with gr.Blocks(title="GPT-SoVITS WebUI") as app:
     gr.Markdown(
-        value="This software is under MIT licence.The author does not have any control for this software. Users are solely reponsible for all voices thats being converted and/or distributed. If you disagree with this Terms and Conditions, you cannot use or cite any files or code in this file. Please check LICENSE. for more info. <br>如不认可该条款, 则不能使用或引用软件包内任何代码和文件. 详见根目录<b>LICENSE</b>."
+        value="This software is under MIT licence.The author does not have any control for this software. Users are solely reponsible for all voices thats being converted and/or distributed. <br>If you disagree with this Terms and Conditions, you cannot use or cite any files or code in this file. Please check LICENSE. for more info.<b>LICENSE</b>."
     )
     with gr.Group():
         gr.Markdown(value="Model switching")
