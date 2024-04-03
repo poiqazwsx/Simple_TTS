@@ -48,7 +48,7 @@ import pdb
 import gradio as gr
 from subprocess import Popen
 import signal
-from config import python_exec,infer_device,is_half,exp_root,webui_port_main,webui_port_infer_tts,webui_port_uvr5,webui_port_subfix,is_share
+from config import python_exec,infer_device,is_half,exp_root,webui_port_main,webui_port_infer_tts,webui_port_subfix,is_share
 from scipy.io import wavfile
 from tools.my_utils import load_audio
 from multiprocessing import cpu_count
@@ -114,9 +114,7 @@ def change_choices():
     return {"choices": sorted(SoVITS_names,key=custom_sort_key), "__type__": "update"}, {"choices": sorted(GPT_names,key=custom_sort_key), "__type__": "update"}
 
 p_label=None
-p_uvr5=None
 p_asr=None
-p_denoise=None
 p_tts_inference=None
 
 def kill_proc_tree(pid, including_parent=True):  
@@ -160,17 +158,7 @@ def change_label(if_label,path_list):
         p_label=None
         yield "Labeling tool WebUI has been shut down."
 
-def change_uvr5(if_uvr5):
-    global p_uvr5
-    if(if_uvr5==True and p_uvr5==None):
-        cmd = '"%s" tools/uvr5/webui.py "%s" %s %s %s'%(python_exec,infer_device,is_half,webui_port_uvr5,is_share)
-        yield "UVR5 has been started."
-        print(cmd)
-        p_uvr5 = Popen(cmd, shell=True)
-    elif(if_uvr5==False and p_uvr5!=None):
-        kill_process(p_uvr5.pid)
-        p_uvr5=None
-        yield "UVR5 has been stopped."
+
 
 def change_tts_inference(if_tts,bert_path,cnhubert_base_path,gpu_number,gpt_path,sovits_path):
     global p_tts_inference
@@ -220,29 +208,8 @@ def close_asr():
         kill_process(p_asr.pid)
         p_asr=None
     return "ASR process has been terminated",{"__type__":"update","visible":True},{"__type__":"update","visible":False}
-def open_denoise(denoise_inp_dir, denoise_opt_dir):
-    global p_denoise
-    if(p_denoise==None):
-        denoise_inp_dir=my_utils.clean_path(denoise_inp_dir)
-        denoise_opt_dir=my_utils.clean_path(denoise_opt_dir)
-        cmd = '"%s" tools/cmd-denoise.py -i "%s" -o "%s" -p %s'%(python_exec,denoise_inp_dir,denoise_opt_dir,"float16"if is_half==True else "float32")
 
-        yield "Denoise has started:%s"%cmd,{"__type__":"update","visible":False},{"__type__":"update","visible":True}
-        print(cmd)
-        p_denoise = Popen(cmd, shell=True)
-        p_denoise.wait()
-        p_denoise=None
-        yield f"Denoise has completed",{"__type__":"update","visible":True},{"__type__":"update","visible":False}
-    else:
-        yield "There is already an ongoing denoising task. It needs to be terminated before the next task can be started.",{"__type__":"update","visible":False},{"__type__":"update","visible":True}
-        # return None
 
-def close_denoise():
-    global p_denoise
-    if(p_denoise!=None):
-        kill_process(p_denoise.pid)
-        p_denoise=None
-    return "The denoise process has been terminated",{"__type__":"update","visible":True},{"__type__":"update","visible":False}
 
 p_train_SoVITS=None
 def open1Ba(batch_size,total_epoch,exp_name,text_low_lr_rate,if_save_latest,if_save_every_weights,save_every_epoch,gpu_numbers1Ba,pretrained_s2G,pretrained_s2D):
@@ -680,10 +647,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
 
     with gr.Tabs():
         with gr.TabItem("0-Prerequisite Dataset Acquisition Tool"):# randomly slice to prevent uvr5 from running out of memory -> uvr5 -> slicer -> asr -> labeling
-            gr.Markdown(value="0a-UVR5 webui (for vocal separation, deecho, dereverb and denoise)")
-            with gr.Row():
-                if_uvr5 = gr.Checkbox(label="Open UVR5-WebUI",show_label=True)
-                uvr5_info = gr.Textbox(label="UVR5 process output log")
+
             gr.Markdown(value="0b-Audio slicer")
             with gr.Row():
                 with gr.Row():
@@ -701,13 +665,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                     alpha=gr.Slider(minimum=0,maximum=1,step=0.05,label="aalpha_mix: proportion of normalized audio merged into dataset",value=0.25,interactive=True)
                     n_process=gr.Slider(minimum=1,maximum=n_cpu,step=1,label="CPU threads used for audio slicing",value=4,interactive=True)
                     slicer_info = gr.Textbox(label="Audio slicer output log")
-            gr.Markdown(value="0bb-Denoiser")
-            with gr.Row():
-                open_denoise_button = gr.Button("Denoise on", variant="primary",visible=True)
-                close_denoise_button = gr.Button("Denoise close", variant="primary",visible=False)
-                denoise_input_dir=gr.Textbox(label="Denoise input path",value="")
-                denoise_output_dir=gr.Textbox(label="Denoise output path",value="output/denoise_opt")
-                denoise_info = gr.Textbox(label="Denoise info")
+
             gr.Markdown(value="0c-Chinese ASR tool")
             with gr.Row():
                 open_asr_button = gr.Button("Start batch ASR", variant="primary",visible=True)
@@ -765,13 +723,11 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                 )
                 label_info = gr.Textbox(label="Proofreading tool output log")
             if_label.change(change_label, [if_label,path_list], [label_info])
-            if_uvr5.change(change_uvr5, [if_uvr5], [uvr5_info])
+
             open_asr_button.click(open_asr, [asr_inp_dir, asr_opt_dir, asr_model, asr_size, asr_lang], [asr_info,open_asr_button,close_asr_button])
             close_asr_button.click(close_asr, [], [asr_info,open_asr_button,close_asr_button])
             open_slicer_button.click(open_slice, [slice_inp_path,slice_opt_root,threshold,min_length,min_interval,hop_size,max_sil_kept,_max,alpha,n_process], [slicer_info,open_slicer_button,close_slicer_button])
             close_slicer_button.click(close_slice, [], [slicer_info,open_slicer_button,close_slicer_button])
-            open_denoise_button.click(open_denoise, [denoise_input_dir,denoise_output_dir], [denoise_info,open_denoise_button,close_denoise_button])
-            close_denoise_button.click(close_denoise, [], [denoise_info,open_denoise_button,close_denoise_button])
 
         with gr.TabItem("1-GPT-SoVITS-TTS"):
             with gr.Row():
@@ -866,7 +822,6 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                     if_tts = gr.Checkbox(label="Open TTS inference WEBUI", show_label=True)
                     tts_info = gr.Textbox(label="TTS inference webui output log")
                     if_tts.change(change_tts_inference, [if_tts,bert_pretrained_dir,cnhubert_base_dir,gpu_number_1C,GPT_dropdown,SoVITS_dropdown], [tts_info])
-        with gr.TabItem("2-GPT-SoVITS-Voice Changer"):gr.Markdown(value="In construction, please wait")
     app.queue(concurrency_count=511, max_size=1022).launch(
         server_name="0.0.0.0",
         inbrowser=True,
