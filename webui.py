@@ -822,10 +822,11 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                     if_tts = gr.Checkbox(label="Open TTS inference WEBUI", show_label=True)
                     tts_info = gr.Textbox(label="TTS inference webui output log")
                     if_tts.change(change_tts_inference, [if_tts,bert_pretrained_dir,cnhubert_base_dir,gpu_number_1C,GPT_dropdown,SoVITS_dropdown], [tts_info])
-    app.queue(concurrency_count=511, max_size=1022).launch(
+    app.queue(max_size=1022).launch(
         server_name="0.0.0.0",
         inbrowser=True,
         share=is_share,
         server_port=webui_port_main,
         quiet=True,
+        max_threads=511,
     )
