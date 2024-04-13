@@ -566,7 +566,7 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                 gr.Markdown("When using the no reference text mode, it is recommended to use a fine-tuned GPT model.")
                 prompt_text = gr.Textbox(label="Text for reference audio", value="")
             prompt_language = gr.Dropdown(
-                label="Language for reference audio", choices=["Chinese", "English", "Japanese", "Chinese + English", "Japanese + English", "多语种混合"], value="中文"
+                label="Language for reference audio", choices=["Chinese", "English", "Japanese", "Chinese + English", "Japanese + English", "Auto"], value="Auto"
             )
         gr.Markdown(value="*Please fill the text that needs inference. Select Chinese for mixed Chinese and English text, choose Japanese for mixed Japanese and English text. Mixed Chinese and Japanese is currently not supported; non-target language text will be automatically discarded.")
         with gr.Row():
