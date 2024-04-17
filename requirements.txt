@@ -15,7 +15,6 @@ pypinyin
 pyopenjtalk
 g2p_en
 torchaudio
-modelscope==1.10.0
 sentencepiece
 transformers
 chardet
