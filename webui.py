@@ -708,19 +708,19 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
                             label       = i18n("ASR 模型"),
                             choices     = list(asr_dict.keys()),
                             interactive = True,
-                            value="达摩 ASR (中文)"
+                            value="Faster Whisper (多语种)"
                         )
                         asr_size = gr.Dropdown(
                             label       = i18n("ASR 模型尺寸"),
-                            choices     = ["large"],
+                            choices     = ["tiny",     "tiny.en", "base",     "base.en", "small",    "small.en", "medium",   "medium.en", "large",    "large-v1", "large-v2", "large-v3"],
                             interactive = True,
-                            value="large"
+                            value="large-v3"
                         )
                         asr_lang = gr.Dropdown(
                             label       = i18n("ASR 语言设置"),
-                            choices     = ["zh"],
+                            choices     = ['auto', 'zh', 'en', 'ja'],
                             interactive = True,
-                            value="zh"
+                            value="auto"
                         )
                     with gr.Row():
                         asr_info = gr.Textbox(label=i18n("ASR进程输出信息"))
