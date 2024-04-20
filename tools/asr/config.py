@@ -17,11 +17,6 @@ def check_fw_local_models():
     return model_size_list
 
 asr_dict = {
-    "达摩 ASR (中文)": {
-        'lang': ['zh'],
-        'size': ['large'],
-        'path': 'funasr_asr.py',
-    },
     "Faster Whisper (多语种)": {
         'lang': ['auto', 'zh', 'en', 'ja'],
         'size': check_fw_local_models(),
