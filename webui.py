@@ -748,8 +748,6 @@ with gr.Blocks(title="GPT-SoVITS WebUI") as app:
             close_asr_button.click(close_asr, [], [asr_info,open_asr_button,close_asr_button])
             open_slicer_button.click(open_slice, [slice_inp_path,slice_opt_root,threshold,min_length,min_interval,hop_size,max_sil_kept,_max,alpha,n_process], [slicer_info,open_slicer_button,close_slicer_button])
             close_slicer_button.click(close_slice, [], [slicer_info,open_slicer_button,close_slicer_button])
-            
-
         with gr.TabItem(i18n("1-GPT-SoVITS-TTS")):
             with gr.Row():
                 exp_name = gr.Textbox(label=i18n("*实验/模型名"), value="xxx", interactive=True)
